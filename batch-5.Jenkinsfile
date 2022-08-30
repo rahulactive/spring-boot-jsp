@@ -21,8 +21,17 @@ pipeline {
             }
         }
         stage('Test') {
-            steps {
-                sh 'mvn test'
+            parallel {
+                stage('Unit Test') {
+                    steps {
+                        sh 'mvn test'
+                    }
+                }
+                stage('Integration Test') {
+                    steps {
+                        echo'Doing integration test'
+                    }
+                }
             }
         }
         stage('Build') {
@@ -35,7 +44,7 @@ pipeline {
                 SSH_KEY = credentials('web-pub')
             }
             when {
-                branch pattern: 'main', comparator: "REGEXP"
+                branch pattern: "main", comparator: "REGEXP"
             }
             steps {
                 sh '''
