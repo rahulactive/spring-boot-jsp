@@ -27,7 +27,7 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
-        stage('Copying Artifcats') {
+        stage('Publishing Artifcats') {
             steps {
                 sh '''
                     version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
