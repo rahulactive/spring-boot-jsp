@@ -5,6 +5,7 @@ pipeline {
         maven '3.8.4'
     }
     parameters {
+        booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enble this as a production build')
         string(name: 'SERVER_IP', defaultValue: '127.0.0.1', description: 'Provide production server IP Address.')
         string(name: 'SSH_USER', defaultValue: 'ubuntu', description: 'Provide SSH username.')
     }
@@ -44,7 +45,7 @@ pipeline {
                 SSH_KEY = credentials('web-pub')
             }
             when {
-                branch pattern: "main", comparator: "REGEXP"
+                expression { return params.PROD_BUILD }
             }
             steps {
                 sh '''
