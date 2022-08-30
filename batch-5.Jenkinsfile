@@ -4,7 +4,10 @@ pipeline {
     tools {
         maven '3.8.4'
     }
-    
+    parameters {
+        string(name: 'SERVER_IP', defaultValue: '127.0.0.1', description: 'Provide production server IP Address.')
+        string(name: 'SSH_USER', defaultValue: 'ubuntu', description: 'Provide SSH username.')
+    }
 
     stages {
         stage('Source') {
@@ -28,10 +31,13 @@ pipeline {
             }
         }
         stage('Publishing Artifcats') {
+            environment {
+                SSH_KEY = credentials('web-pub')
+            }
             steps {
                 sh '''
                     version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
-                    rsync -avzP target/news-${version}.jar /opt/artifactory/
+                    rsync -avzPe "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSH_USER}@${SERVER_IP}:/opt/artifactory/
                 '''
             }
         }
