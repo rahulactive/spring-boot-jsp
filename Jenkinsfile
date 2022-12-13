@@ -2,18 +2,17 @@ pipeline {
     agent any
 
     tools {
-        maven '3.8.4'
+        maven '3.8.1'
     }
     parameters {
         booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enble this as a production build')
         string(name: 'SERVER_IP', defaultValue: '127.0.0.1', description: 'Provide production server IP Address.')
-        string(name: 'SSH_USER', defaultValue: 'ubuntu', description: 'Provide SSH username.')
     }
 
     stages {
         stage('Source') {
             steps {
-                git branch: 'batch5', changelog: false, credentialsId: 'github', poll: false, url: 'https://github.com/ajilraju/spring-boot-jsp.git'
+                git branch: 'batch8', changelog: false, credentialsId: 'github', poll: false, url: 'https://github.com/ajilraju/spring-boot-jsp.git'
             }
         }
         stage('Validate') {
@@ -30,7 +29,7 @@ pipeline {
                 }
                 stage('Integration Test') {
                     steps {
-                        echo'Doing integration test'
+                        echo'Doing integration test' // Just for demostration of the parallel job.
                     }
                 }
             }
@@ -41,17 +40,17 @@ pipeline {
             }
         }
         stage('Publishing Artifcats') {
-            environment {
-                SSH_KEY = credentials('web-pub')
-            }
             when {
-                expression { return params.PROD_BUILD }
+                        expression { return params.PROD_BUILD }
             }
             steps {
-                sh '''
-                    version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
-                    rsync -avzPe "ssh -i $SSH_KEY -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSH_USER}@${SERVER_IP}:/opt/artifactory/
-                '''
+                withCredentials([sshUserPrivateKey(credentialsId: 'deploy-java-ssh-key', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
+                    sh '''
+                        version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
+                        rsync -avzPe "ssh -i ${SSHKEY} -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSHUSER}@${SERVER_IP}:/home/deploy/java-app/
+                        ssh -o StrictHostKeyChecking=no -i ${SSHKEY} ${SSHUSER}@${SERVER_IP} sudo /usr/bin/systemctl restart java-app.service
+                    '''
+                }
             }
         }
     }
