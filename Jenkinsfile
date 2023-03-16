@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        maven '3.8.1'
+        maven 'v3.8.1'
     }
     parameters {
         booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enble this as a production build')
@@ -44,11 +44,11 @@ pipeline {
                         expression { return params.PROD_BUILD }
             }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'deploy-java-ssh-key', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'EC2-KEY', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
                     sh '''
                         version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
-                        rsync -avzPe "ssh -i ${SSHKEY} -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSHUSER}@${SERVER_IP}:/home/deploy/java-app/
-                        ssh -o StrictHostKeyChecking=no -i ${SSHKEY} ${SSHUSER}@${SERVER_IP} sudo /usr/bin/systemctl restart java-app.service
+                        rsync -avzPe "ssh -i ${SSHKEY} -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSHUSER}@${SERVER_IP}:/home/spring/newsapp/
+                        ssh -o StrictHostKeyChecking=no -i ${SSHKEY} ${SSHUSER}@${SERVER_IP} sudo /usr/bin/systemctl restart newsapp.service
                     '''
                 }
             }
