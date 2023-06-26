@@ -2,10 +2,10 @@ pipeline {
     agent any
 
     tools {
-        maven 'v3.8.1'
+        maven 'v3.8.2'
     }
     parameters {
-        booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enble this as a production build')
+        booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enable this as a production build')
         string(name: 'SERVER_IP', defaultValue: '127.0.0.1', description: 'Provide production server IP Address.')
     }
 
@@ -29,7 +29,7 @@ pipeline {
                 }
                 stage('Integration Test') {
                     steps {
-                        echo'Doing integration test' // Just for demostration of the parallel job.
+                        echo 'Doing integration test' // Just for demonstration of the parallel job.
                     }
                 }
             }
@@ -39,27 +39,38 @@ pipeline {
                 sh 'mvn clean package'
             }
         }
-        stage('Publishing Artifcats') {
-            when {
+        stage('Publishing and Deployment') {
+            stages {
+                stage('Publishing Artifacts') {
+                    steps {
+                        archiveArtifacts artifacts: 'target/news-v*.jar', fingerprint: true, onlyIfSuccessful: true
+                    }
+                }
+                stage('Deploying to EC2') {
+                    when {
                         expression { return params.PROD_BUILD }
-            }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'EC2-KEY', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
-                    sh '''
-                        version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
-                        rsync -avzPe "ssh -i ${SSHKEY} -o StrictHostKeyChecking=no" target/news-${version}.jar ${SSHUSER}@${SERVER_IP}:/home/spring/newsapp/
-                        ssh -o StrictHostKeyChecking=no -i ${SSHKEY} ${SSHUSER}@${SERVER_IP} sudo /usr/bin/systemctl restart newsapp.service
-                    '''
+                    }
+                    steps {
+                        // credentialsId is different from your current key, please change it accordingly
+                        withCredentials([sshUserPrivateKey(credentialsId: 'deployment-key', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
+                            sh '''
+                                version=$(perl -nle 'print "$1" if /<version>(v\\d+\\.\\d+\\.\\d+)<\\/version>/' pom.xml)
+                                rsync -avzP -e "ssh -o StrictHostKeyChecking=no -i ${SSHKEY}" target/news-${version}.jar ${SSHUSER}@${SERVER_IP}:/home/headless-newsapp/newsapp/
+                                ssh -o StrictHostKeyChecking=no -i ${SSHKEY} ${SSHUSER}@${SERVER_IP} sudo /usr/bin/systemctl restart newsapp.service
+                            '''
+                        }
+                    }
                 }
             }
         }
     }
+
     post {
         success {
-            slackSend color: "good", message: "The Build #${env.BUILD_NUMBER} is success: ${env.BUILD_URL}"
+            slackSend color: 'good', message: "The Build #${env.BUILD_NUMBER} was successful: ${env.BUILD_URL}"
         }
         failure {
-            slackSend color: "danger", message: "The Build #${env.BUILD_NUMBER} is failed: ${env.BUILD_URL}"
+            slackSend color: 'danger', message: "The Build #${env.BUILD_NUMBER} has failed: ${env.BUILD_URL}"
         }
     }
 }
