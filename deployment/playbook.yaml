@@ -1,0 +1,64 @@
+---
+- name: Deploy news app
+  hosts: all
+  become: true
+  user: ubuntu
+
+  vars_files:
+    - vars/main.yaml
+
+  handlers:
+    - name: Reload systemd unit files
+      ansible.builtin.systemd:
+        name: newsapp.service
+        state: restarted
+        enabled: true
+
+  tasks:
+    - name: Install OpenJDK JRE
+      ansible.builtin.apt:
+        name: openjdk-11-jre
+        state: present
+        update_cache: true
+
+    - name: Create deploy user
+      ansible.builtin.user:
+        name: "{{ deploy_usr }}"
+        state: present
+        shell: /bin/bash
+
+    - name: Create deployment directory
+      ansible.builtin.file:
+        path: /home/{{ deploy_usr }}/{{ deploy_dir }}
+        owner: "{{ deploy_usr }}"
+        group: "{{ deploy_usr }}"
+        state: directory
+        mode: '0755'
+
+    - name: Depolying news app file
+      ansible.builtin.copy:
+        src: "../target/{{ app_name }}"
+        dest: "/home/{{ deploy_usr }}/{{ deploy_dir }}/"
+        owner: "{{ deploy_usr }}"
+        group: "{{ deploy_usr }}"
+        mode: '0744'
+      notify: Reload systemd unit files
+
+    - name: Deploy systemd file
+      ansible.builtin.template:
+        src: templates/newsapp.service.j2
+        dest: /etc/systemd/system/newsapp.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd to pick up new service file
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Allow deploy user to restart newsapp.service without password
+      ansible.builtin.lineinfile:
+        dest: /etc/sudoers
+        line: "{{ deploy_usr }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart newsapp.service"
+        validate: 'visudo -cf %s'
+
