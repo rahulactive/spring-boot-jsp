@@ -61,4 +61,3 @@
         dest: /etc/sudoers
         line: "{{ deploy_usr }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart newsapp.service"
         validate: 'visudo -cf %s'
-
