@@ -56,7 +56,7 @@ pipeline {
                             sh '''
                                 export APP_NAME=$(perl -nle 'print "$2" if /<(version>)(v(\\d\\.){2}\\d)<\\/\\1/' pom.xml)
                                 cd deployment
-                                ansible-playbook -i ${IPADDR}, playbook.yaml -e app_name="news-${APP_NAME}.jar" --private-key=${SSHKEY} -u ${SSHUSER} -vv --limit --limit ${IPADDR}:!127.0.0.1
+                                ansible-playbook -i ${IPADDR}, playbook.yaml -e app_name="news-${APP_NAME}.jar" --private-key=${SSHKEY} -u ${SSHUSER} -vv --limit ${IPADDR}:!127.0.0.1
                             '''
                         }
                     }
