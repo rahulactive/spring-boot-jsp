@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        maven 'v3.9.5'
+        maven '3.9.5'
     }
     parameters {
         booleanParam(name: 'PROD_BUILD', defaultValue: true, description: 'Enable this as a production build')
