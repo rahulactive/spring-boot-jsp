@@ -54,9 +54,10 @@ pipeline {
                         // credentialsId is different from your current key, please change it accordingly
                         withCredentials([sshUserPrivateKey(credentialsId: 'aws-ec2', keyFileVariable: 'SSHKEY', usernameVariable: 'SSHUSER')]) {
                             sh '''
+                                env
                                 export APP_NAME=$(perl -nle 'print "$2" if /<(version>)(v(\\d\\.){2}\\d)<\\/\\1/' pom.xml)
                                 cd deployment
-                                ansible-playbook -i ${IPADDR}, playbook.yaml -e app_name="news-${APP_NAME}.jar" --private-key=${SSHKEY} -u ${SSHUSER} -vv --limit ${IPADDR}:!127.0.0.1
+                                ansible-playbook -i ${IPADDR}, playbook.yaml -e app_name="news-${APP_NAME}.jar" --private-key=${SSHKEY} -u ${SSHUSER} -vv
                             '''
                         }
                     }
